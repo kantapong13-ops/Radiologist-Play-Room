@@ -158,6 +158,34 @@ main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
 @media (max-width:480px){
   .daily-title{max-width:min(62vw,260px)}
 }
+
+.hy-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:560px){ .hy-grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.hy-tile{
+  display:flex;flex-direction:column;align-items:flex-start;gap:7px;
+  padding:14px;border-radius:14px;border:1px solid var(--line);
+  background:var(--surface);box-shadow:var(--shadow);cursor:pointer;text-align:left;
+  transition:transform .1s,border-color .12s;
+}
+.hy-tile:hover{border-color:var(--muted-2)}
+.hy-tile:active{transform:scale(.99)}
+.hy-tile .abbr{
+  font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.04em;
+  padding:3px 7px;border-radius:6px;background:var(--accent-soft);color:var(--accent-ink);
+}
+.hy-tile .nm{font-size:14px;font-weight:600;line-height:1.25}
+.hy-tile .ct{font-family:var(--font-mono);font-size:11px;color:var(--muted-2)}
+
+.menu-item.static{cursor:default}
+.menu-item.static:hover{border-color:var(--line)}
+.menu-item.static:active{transform:none}
+.hy-links{display:flex;gap:6px;flex:none}
+.hy-pill{
+  font-size:11.5px;font-weight:600;padding:6px 10px;border-radius:8px;
+  border:1px solid var(--line);color:var(--accent);background:var(--surface-2);
+  text-decoration:none;white-space:nowrap;
+}
+.hy-pill:hover{border-color:var(--accent);background:var(--accent-soft)}
 </style>
 </head>
 <body>
@@ -295,10 +323,7 @@ main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
     </section>
 
     <section class="screen" data-screen="highyield" data-parent="home">
-      <div class="empty">
-        <div class="glyph2">⚡</div>
-        <p>Nothing filed yet. High-yield summaries, cheat-sheets, and quick-review pages will show up here.</p>
-      </div>
+      <div class="hy-grid" id="hyGrid"></div>
     </section>
 
   </main>
@@ -314,6 +339,89 @@ main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
 </div>
 
 <script>
+/* ------------------------------------------------------------------
+   HIGH YIELD — subspecialty screens.
+   To file new material, add an entry to the `items` array of the
+   matching subspecialty below. Two accepted shapes:
+
+     { label:'Topic name', note:'optional small print',
+       video:'https://drive.google.com/...',
+       handout:'https://drive.google.com/...' }     -> row with Video / Handout buttons
+
+     { label:'Topic name', note:'optional small print',
+       href:'https://drive.google.com/...' }        -> whole row is one link
+   ------------------------------------------------------------------ */
+(function(){
+  var SUBS = [
+    { id:'neuro',   abbr:'NEU',   name:'Neuro',        items:[] },
+    { id:'abdomen', abbr:'ABD',   name:'Abdomen',      items:[] },
+    { id:'gigu',    abbr:'GI/GU', name:'GI/GU',        items:[] },
+    { id:'breast',  abbr:'BR',    name:'Breast/Mammo', items:[] },
+    { id:'obgyn',   abbr:'OB',    name:'Obs/Gyn',      items:[] },
+    { id:'inr',     abbr:'INR',   name:'INR',          items:[] },
+    { id:'ir',      abbr:'IR',    name:'IR',           items:[] },
+    { id:'peds',    abbr:'PED',   name:'Pediatric',    items:[] },
+    { id:'er',      abbr:'ER',    name:'Emergency',    items:[] },
+    { id:'chest',   abbr:'CHE',   name:'Chest',        items:[] },
+    { id:'msk',     abbr:'MSK',   name:'MSK',          items:[] },
+    { id:'cvs',     abbr:'CVS',   name:'CVS',          items:[] }
+  ];
+
+  var grid = document.getElementById('hyGrid');
+  var panels = document.querySelector('main');
+  if(!grid || !panels) return;
+
+  var EXT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>';
+
+  function esc(s){
+    return String(s).replace(/[&<>"]/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+    });
+  }
+
+  SUBS.forEach(function(s){
+    var n = s.items.length;
+
+    var tile = document.createElement('button');
+    tile.className = 'hy-tile';
+    tile.setAttribute('data-goto', 'hy-'+s.id);
+    tile.innerHTML =
+      '<span class="abbr">'+esc(s.abbr)+'</span>' +
+      '<span class="nm">'+esc(s.name)+'</span>' +
+      '<span class="ct">'+(n ? n+' item'+(n>1?'s':'') : '—')+'</span>';
+    grid.appendChild(tile);
+
+    var sec = document.createElement('section');
+    sec.className = 'screen';
+    sec.setAttribute('data-screen', 'hy-'+s.id);
+    sec.setAttribute('data-parent', 'highyield');
+    sec.setAttribute('data-title', s.name);
+
+    if(!n){
+      sec.innerHTML =
+        '<div class="empty">' +
+          '<div class="glyph2">⚡</div>' +
+          '<p>No '+esc(s.name)+' material filed yet. Send the Drive links for a video or handout and they will be listed here.</p>' +
+        '</div>';
+    } else {
+      sec.innerHTML = '<nav class="menu">' + s.items.map(function(it){
+        var label = '<span class="label"><b>'+esc(it.label)+'</b>' +
+                    (it.note ? '<span>'+esc(it.note)+'</span>' : '') + '</span>';
+        if(it.href){
+          return '<a class="menu-item" href="'+esc(it.href)+'" target="_blank" rel="noopener">' +
+                 label + '<span class="aff">'+EXT+'</span></a>';
+        }
+        var pills = '';
+        if(it.video)   pills += '<a class="hy-pill" href="'+esc(it.video)+'" target="_blank" rel="noopener">Video</a>';
+        if(it.handout) pills += '<a class="hy-pill" href="'+esc(it.handout)+'" target="_blank" rel="noopener">Handout</a>';
+        return '<div class="menu-item static">' + label + '<span class="hy-links">'+pills+'</span></div>';
+      }).join('') + '</nav>';
+    }
+
+    panels.appendChild(sec);
+  });
+})();
+
 (function(){
   var screens = {};
   document.querySelectorAll('.screen').forEach(function(s){
@@ -336,7 +444,8 @@ main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
     Object.keys(screens).forEach(function(k){
       screens[k].el.classList.toggle('active', k === name);
     });
-    topbarTitle.textContent = titles[name] || 'Reading Room';
+    var cur = screens[name] && screens[name].el;
+    topbarTitle.textContent = (cur && cur.dataset.title) || titles[name] || 'Radiology Play Room';
     backBtn.style.display = (name === 'home') ? 'none' : 'flex';
     window.scrollTo(0,0);
   }
