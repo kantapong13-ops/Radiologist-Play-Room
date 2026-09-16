@@ -138,6 +138,36 @@ main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
   height:44px;width:44px;flex:none;border-radius:9px;object-fit:cover;
   border:1px solid var(--line);background:var(--surface-2);
 }
+
+.corner-widget{
+  display:flex;flex-direction:column;gap:7px;
+  padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 4px;
+}
+.clock{
+  font-family:var(--font-mono);font-weight:600;font-size:19px;letter-spacing:.01em;
+  font-variant-numeric:tabular-nums;color:var(--text);
+}
+.daily-row{display:flex;align-items:center;gap:8px;min-width:0}
+.radio-thumb{width:30px;height:30px;border-radius:8px;object-fit:cover;border:1px solid var(--line);flex:none}
+.daily-box{display:flex;flex-direction:column;min-width:0;line-height:1.35}
+.daily-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted-2)}
+.daily-title{
+  font-size:11.5px;font-weight:600;color:var(--accent);max-width:150px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;
+}
+
+@media (min-width:600px){
+  .corner-widget{
+    position:fixed;top:0;left:0;z-index:7;
+    padding:16px 18px 12px;
+    background:color-mix(in srgb, var(--surface) 85%, transparent);
+    backdrop-filter:blur(6px);
+    border:1px solid var(--line);border-top:0;border-left:0;
+    border-radius:0 0 16px 0;
+  }
+  .topbar{padding-left:186px}
+  main{padding-left:186px}
+}
 </style>
 </head>
 <body>
@@ -145,6 +175,17 @@ main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
 <video class="bg-video" autoplay muted loop playsinline src="Live%20wall%20paper.mp4"></video>
 
 <div class="app">
+  <div class="corner-widget" id="cornerWidget">
+    <div class="clock" id="clock">00:00:00</div>
+    <div class="daily-row">
+      <img class="radio-thumb" src="Decorate/Radio.jpg" alt="Radio" loading="lazy">
+      <div class="daily-box">
+        <span class="daily-label">Today's read</span>
+        <a class="daily-title" id="dailyLink" href="#" target="_blank" rel="noopener">Loading…</a>
+      </div>
+    </div>
+  </div>
+
   <div class="topbar" id="topbar">
     <button class="back-btn" id="backBtn" aria-label="Back">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -322,6 +363,68 @@ main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
   });
 
   show('home');
+})();
+
+(function(){
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function tick(){
+    var d = new Date();
+    var el = document.getElementById('clock');
+    if(el) el.textContent = pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+
+(function(){
+  var JOURNALS = [
+    'Radiology','Radiographics','AJR Am J Roentgenol','Eur Radiol','Clin Radiol',
+    'J Magn Reson Imaging','AJNR Am J Neuroradiol','Insights Imaging','Abdom Radiol (NY)','Skeletal Radiol'
+  ];
+  var link = document.getElementById('dailyLink');
+  if(!link) return;
+
+  var dayIndex = Math.floor(Date.now()/86400000) % JOURNALS.length;
+  var journal = JOURNALS[dayIndex];
+  var termParam = encodeURIComponent('"'+journal+'"[ta]');
+  var searchUrl = 'https://pubmed.ncbi.nlm.nih.gov/?term='+termParam+'&sort=date';
+
+  function setFallback(){
+    link.textContent = journal;
+    link.href = searchUrl;
+    link.title = 'Latest in '+journal+' (PubMed)';
+  }
+  setFallback();
+
+  var todayKey = new Date().toISOString().slice(0,10);
+  var cacheKey = 'rpr-daily-'+todayKey;
+  var cached = null;
+  try{ cached = JSON.parse(localStorage.getItem(cacheKey) || 'null'); }catch(e){}
+  if(cached && cached.title && cached.url){
+    link.textContent = cached.title;
+    link.href = cached.url;
+    link.title = cached.title;
+    return;
+  }
+
+  var esearch = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term='+termParam+'&sort=date&retmax=1&retmode=json';
+  fetch(esearch).then(function(r){ return r.json(); }).then(function(d){
+    var ids = d && d.esearchresult && d.esearchresult.idlist;
+    if(!ids || !ids.length) throw new Error('no results');
+    var pmid = ids[0];
+    return fetch('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id='+pmid+'&retmode=json')
+      .then(function(r2){ return r2.json(); })
+      .then(function(d2){
+        var item = d2 && d2.result && d2.result[pmid];
+        if(!item || !item.title) throw new Error('no title');
+        var title = item.title.replace(/<[^>]+>/g,'');
+        var url = 'https://pubmed.ncbi.nlm.nih.gov/'+pmid+'/';
+        link.textContent = title;
+        link.href = url;
+        link.title = title;
+        try{ localStorage.setItem(cacheKey, JSON.stringify({title:title, url:url})); }catch(e){}
+      });
+  }).catch(function(){ /* fallback link already set */ });
 })();
 </script>
 </body>
