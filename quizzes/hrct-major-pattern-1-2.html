@@ -160,88 +160,34 @@
     .stage{grid-template-columns:1fr;}
   }
 
-  .viewer{
-    background:#000;
-    border:1px solid var(--line);
-    border-radius:var(--radius);
-    position:relative;
-    overflow:hidden;
-    aspect-ratio:4/5;
-    touch-action:none;
-    cursor:grab;
-    user-select:none;
-    -webkit-user-select:none;
-  }
-  .viewer.tool-wl{cursor:crosshair;}
-  .viewer.tool-zoom{cursor:zoom-in;}
-  .viewer.dragging{cursor:grabbing;}
-  .viewer img{
-    position:absolute;
-    left:0; top:0;
-    transform-origin:0 0;
-    max-width:none;
-    will-change:transform;
-    pointer-events:none;
-    -webkit-user-drag:none;
-  }
-  .vov{
-    position:absolute;
-    font-family:var(--mono);
-    font-size:11px;
-    line-height:1.4;
-    color:var(--accent-strong);
-    text-shadow:0 0 3px #000, 0 0 1px #000;
-    pointer-events:none;
-    white-space:nowrap;
-  }
+  .vstage{position:relative; background:#000; overflow:hidden; min-height:0; border:1px solid var(--line); border-radius:var(--radius); aspect-ratio:4/5;}
+  .vstage.pseudo-fs{position:fixed; inset:0; z-index:90; aspect-ratio:auto; border:0; border-radius:0;}
+  .vstage:fullscreen{aspect-ratio:auto; border:0; border-radius:0;}
+  html.has-pseudo-fs, html.has-pseudo-fs body{overflow:hidden;}
+  .vp{position:absolute; inset:0; touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none;}
+  .vp.tool-wl{cursor:crosshair;}
+  .vp.tool-zoom{cursor:zoom-in;}
+  .vp.dragging{cursor:grabbing;}
+  .vp img{position:absolute; left:0; top:0; transform-origin:0 0; max-width:none; will-change:transform; pointer-events:none; -webkit-user-drag:none;}
+  .vov{position:absolute; font-family:var(--mono); font-size:11px; line-height:1.4; color:var(--accent-strong); text-shadow:0 0 3px #000, 0 0 1px #000; pointer-events:none; white-space:nowrap;}
   .vov.tl{top:10px; left:12px;}
   .vov.bl{bottom:10px; left:12px;}
   .vov.br{bottom:10px; right:12px; text-align:right;}
   .vov .dim{color:rgba(255,255,255,0.5);}
-  .vtoolbar{
-    position:absolute;
-    top:8px; right:8px;
-    display:flex;
-    gap:2px;
-    background:rgba(10,13,18,0.82);
-    border:1px solid rgba(255,255,255,0.08);
-    border-radius:6px;
-    padding:3px;
-    backdrop-filter:blur(6px);
-  }
-  .vtb{
-    width:30px; height:28px;
-    display:grid; place-items:center;
-    background:none; border:0; border-radius:5px;
-    color:#c9ced3;
-  }
-  .vtb:hover{background:rgba(255,255,255,0.08); color:#fff;}
+  .vtoolbar{position:absolute; top:10px; right:10px; display:flex; gap:2px; background:rgba(20,22,25,.82); border:1px solid rgba(255,255,255,.08); border-radius:8px; padding:3px; backdrop-filter:blur(6px);}
+  .vtb{width:36px; height:34px; display:grid; place-items:center; background:none; border:0; border-radius:6px; color:#c9ced3; cursor:pointer;}
+  .vtb:hover{background:rgba(255,255,255,.08); color:#fff;}
   .vtb[aria-pressed="true"]{background:var(--accent-wash-2); color:var(--accent-strong);}
-  .vtb svg{width:16px; height:16px;}
-  .vtb-sep{width:1px; background:rgba(255,255,255,0.12); margin:4px 2px;}
-  .vhelp{
-    position:absolute;
-    top:44px; right:8px;
-    background:rgba(10,13,18,0.95);
-    color:#d9dde1;
-    border:1px solid rgba(255,255,255,0.1);
-    border-radius:6px;
-    padding:10px 12px;
-    font-family:var(--mono);
-    font-size:11px;
-    line-height:1.8;
-    display:none;
-    max-width:230px;
-    z-index:5;
-  }
+  .vtb svg{width:19px; height:19px;}
+  .vtb-sep{width:1px; background:rgba(255,255,255,.1); margin:5px 3px;}
+  .vhelp{position:absolute; top:52px; right:10px; background:rgba(20,22,25,.95); color:#d9dde1; border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:12px 14px; font-family:var(--mono); font-size:11.5px; line-height:1.8; display:none; max-width:260px;}
   .vhelp.open{display:block;}
-  .vhelp kbd{
-    background:rgba(255,255,255,0.1);
-    border-radius:3px;
-    padding:0 4px;
-    margin-right:4px;
+  .vhelp kbd{background:rgba(255,255,255,.1); border-radius:3px; padding:0 5px; margin-right:4px; font-family:var(--mono);}
+  @media (max-width:880px){
+    .vtoolbar{top:auto; bottom:10px; right:50%; transform:translateX(50%);}
+    .vhelp{top:auto; bottom:56px; right:50%; transform:translateX(50%);}
+    .vov.bl, .vov.br{bottom:56px;}
   }
-
   .panel{
     background:var(--panel);
     border:1px solid var(--line);
@@ -512,7 +458,7 @@
   @media (max-width:560px){
     .brand h1{font-size:16.5px;}
     .panel{padding:16px;}
-    .viewer{aspect-ratio:1/1;}
+    .vstage{aspect-ratio:1/1;}
   }
 </style>
 </head>
@@ -537,8 +483,10 @@
 
   <!-- Case stage -->
   <div class="stage" id="stage">
-    <div class="viewer" id="viewer" aria-label="Radiograph viewer. Drag to pan, scroll to zoom, right-drag to adjust window and level.">
-      <img id="caseImg" src="" alt="Case image" draggable="false">
+    <div class="vstage" id="vstage">
+      <div class="vp" id="vp" aria-label="Radiograph viewer. Drag to pan, scroll to zoom, right-drag to adjust window and level.">
+        <img id="caseImg" src="" alt="Case image" draggable="false">
+      </div>
       <div class="vov tl" id="ovTL"></div>
       <div class="vov bl" id="ovBL"></div>
       <div class="vov br" id="ovBR"></div>
@@ -667,7 +615,8 @@
   var elSummary = document.getElementById("summary");
   var elSumBody = document.getElementById("sumBody");
   var elScoreLine = document.getElementById("scoreLine");
-  var elViewer = document.getElementById("viewer");
+  var elViewer = document.getElementById("vp");
+  var elVStage = document.getElementById("vstage");
 
   function buildStrip(){
     elStrip.innerHTML = "";
@@ -847,14 +796,22 @@
   });
   document.getElementById("btnReview").addEventListener("click", showCaseView);
 
+  var resetArmT = null;
   document.getElementById("btnReset").addEventListener("click", function(){
-    if(window.confirm("Clear all your selected answers? The answer key (if entered) is kept.")){
+    var rb = this;
+    if(!rb.dataset.armed){
+      rb.dataset.armed = "1";
+      rb.textContent = "Click again to clear answers";
+      clearTimeout(resetArmT);
+      resetArmT = setTimeout(function(){ delete rb.dataset.armed; rb.textContent = "Reset answers"; }, 3000);
+      return;
+    }
+    delete rb.dataset.armed; clearTimeout(resetArmT); rb.textContent = "Reset answers";
       answers = {};
       saveJSON(STORE_KEY_ANS, answers);
       renderCase();
       buildSummary();
       refreshStrip();
-    }
   });
 
   /* ---- Key modal ---- */
@@ -974,10 +931,22 @@
     zoomAt(r.width/2, r.height/2, 1/V.s);
   });
   var fsBtn = document.getElementById("fsBtn");
-  if(!document.fullscreenEnabled) fsBtn.hidden = true;
+  function inFs(){ return !!document.fullscreenElement || elVStage.classList.contains("pseudo-fs"); }
+  function leaveFs(){
+    if(document.fullscreenElement && document.exitFullscreen){ try{ document.exitFullscreen(); }catch(e){} }
+    elVStage.classList.remove("pseudo-fs");
+    document.documentElement.classList.remove("has-pseudo-fs");
+  }
+  function enterPseudoFs(){
+    elVStage.classList.add("pseudo-fs");
+    document.documentElement.classList.add("has-pseudo-fs");
+  }
   fsBtn.addEventListener("click", function(){
-    if(document.fullscreenElement) document.exitFullscreen();
-    else elViewer.requestFullscreen && elViewer.requestFullscreen().catch(function(){});
+    if(inFs()){ leaveFs(); return; }
+    var p = null;
+    try{ p = elVStage.requestFullscreen ? elVStage.requestFullscreen() : null; }catch(e){ p = null; }
+    if(p && p.catch){ p.catch(enterPseudoFs); }
+    else if(!p){ enterPseudoFs(); }
   });
   var helpBtn = document.getElementById("helpBtn");
   helpBtn.addEventListener("click", function(){
@@ -1051,11 +1020,12 @@
   new ResizeObserver(function(){ if(!V.touched) fitView(); else applyView(); }).observe(elViewer);
 
   document.addEventListener("keydown", function(e){
+    if(e.key === "Escape" && elVStage.classList.contains("pseudo-fs")){ leaveFs(); return; }
     if(keyModal.classList.contains("show")){
       if(e.key === "Escape") closeKeyModal();
       return;
     }
-    if(e.target.matches("input,select,textarea") || e.metaKey || e.ctrlKey || e.altKey) return;
+    if((e.target.matches && e.target.matches("input,select,textarea")) || e.metaKey || e.ctrlKey || e.altKey) return;
     var k = e.key.toLowerCase();
     if(k === "p") setTool("pan");
     else if(k === "w") setTool("wl");
