@@ -297,6 +297,11 @@ main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
           <span class="label"><b>SIH 2026</b><span>Lecture & quiz</span></span>
           <span class="aff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
         </button>
+        <button class="menu-item" data-goto="tern2026">
+          <span class="glyph">TRN</span>
+          <span class="label"><b>TERN series 2026</b><span>Lecture & quiz</span></span>
+          <span class="aff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+        </button>
         <div class="menu-item disabled">
           <span class="glyph">+</span>
           <span class="label"><b>Next conference</b><span>Added when you file something under it</span></span>
@@ -391,6 +396,28 @@ main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
       </div>
     </section>
 
+    <section class="screen" data-screen="tern2026" data-parent="conference">
+      <nav class="menu">
+        <a class="menu-item" href="https://drive.google.com/drive/folders/1Alg_bnjPIieODhebh0MX73PRKoM7Y2iR?usp=drive_link" target="_blank" rel="noopener">
+          <span class="glyph">🎓</span>
+          <span class="label"><b>Lecture</b><span>Google Drive</span></span>
+          <span class="aff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg></span>
+        </a>
+        <button class="menu-item" data-goto="tern2026-quiz">
+          <span class="glyph">Q</span>
+          <span class="label"><b>Quiz</b><span>No sets yet</span></span>
+          <span class="aff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+        </button>
+      </nav>
+    </section>
+
+    <section class="screen" data-screen="tern2026-quiz" data-parent="tern2026">
+      <div class="empty">
+        <div class="glyph2">📝</div>
+        <p>No quiz sets filed yet for TERN series 2026. Send one and it'll show up here the same way the HRCT quiz does.</p>
+      </div>
+    </section>
+
     <section class="screen" data-screen="workstation" data-parent="home">
       <nav class="menu">
         <a class="menu-item" href="https://script.google.com/macros/s/AKfycbyXijValuDEZ4iSOENd7Kv1-ZFV0y_bSl6QKAI3j9e6PeSRmQjqw-EbHEMKhz3HnzCY/exec" target="_blank" rel="noopener">
@@ -456,6 +483,8 @@ main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
     'hrct2026-quiz': 'Quiz',
     sih2026: 'SIH 2026',
     'sih2026-quiz': 'Quiz',
+    tern2026: 'TERN series 2026',
+    'tern2026-quiz': 'Quiz',
     workstation: 'Work Station',
     faq: 'FAQ',
     finding: 'Finding'
