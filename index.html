@@ -80,6 +80,21 @@ main{flex:1;padding:0 18px calc(env(safe-area-inset-bottom,0px) + 40px)}
 
 .hero{margin-bottom:22px}
 .hero p{margin:2px 0 0;color:var(--muted);font-size:14px;max-width:40ch}
+.cd{display:flex;flex-direction:column;gap:7px;margin-bottom:20px}
+.cd-head{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted-2);margin-bottom:1px}
+.cd-item{display:flex;align-items:baseline;gap:10px;padding:10px 12px;border-radius:11px;
+  border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow)}
+.cd-item.next{border-color:var(--accent);background:var(--accent-soft)}
+.cd-item.past{opacity:.5}
+.cd-name{flex:1;min-width:0;font-size:13.5px;font-weight:600;line-height:1.3}
+.cd-when{display:block;font-weight:400;font-size:11px;color:var(--muted);margin-top:1px;
+  font-family:var(--font-mono)}
+.cd-left{flex:none;text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.cd-n{display:block;font-size:19px;font-weight:600;line-height:1.1}
+.cd-u{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2)}
+.cd-item.next .cd-n{color:var(--accent-ink)}
+.cd-item.soon .cd-n{color:var(--accent)}
 
 .menu{display:flex;flex-direction:column;gap:10px}
 .menu-item{
@@ -245,6 +260,7 @@ main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
       <div class="hero">
         <p>Kantapong's index of radiology textbooks, conference lectures, quizzes, and high-yield material.</p>
       </div>
+      <div class="cd" id="countdown"></div>
       <nav class="menu">
         <button class="menu-item" data-goto="text">
           <span class="glyph">TXT</span>
@@ -884,6 +900,65 @@ main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
   });
 
   render();
+})();
+
+
+/* ------------------------------------------------------------------
+   COUNTDOWN — days remaining to the fixed deadlines below.
+   Recomputed from the device clock on every load, so it never goes stale.
+   Dates are [year, month(1-12), day] of the FIRST day of the event.
+   ------------------------------------------------------------------ */
+(function(){
+  var DEADLINES = [
+    { name:'Neuro summary', when:[2026,12,15],           label:'15 Dec 2026' },
+    { name:'MCQ test',      when:[2027,1,15],            label:'15 Jan 2027' },
+    { name:'Board MCQ',     when:[2027,6,13], days:2,    label:'13–14 Jun 2027' }
+  ];
+  var el = document.getElementById('countdown');
+  if(!el) return;
+
+  function midnight(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function esc(s){
+    return String(s).replace(/[&<>"]/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+    });
+  }
+
+  function render(){
+    var today = midnight(new Date());
+    var rows = DEADLINES.map(function(d){
+      var start = new Date(d.when[0], d.when[1]-1, d.when[2]);
+      var end   = new Date(d.when[0], d.when[1]-1, d.when[2] + ((d.days||1)-1));
+      var left  = Math.round((start - today) / 86400000);
+      return { d:d, left:left, over:(today > end) };
+    });
+
+    // the nearest deadline still ahead gets the accent
+    var nextIdx = -1;
+    for(var i=0;i<rows.length;i++){ if(!rows[i].over){ nextIdx = i; break; } }
+
+    el.innerHTML = '<div class="cd-head">Coming up</div>' + rows.map(function(r,i){
+      var n, u, cls = '';
+      if(r.over){ cls = 'past'; n = '—'; u = 'done'; }
+      else if(r.left < 0){ cls = 'next'; n = 'now'; u = 'in progress'; }
+      else if(r.left === 0){ cls = 'next'; n = 'today'; u = ''; }
+      else {
+        n = r.left; u = r.left === 1 ? 'day' : 'days';
+        if(i === nextIdx) cls = 'next';
+        else if(r.left <= 30) cls = 'soon';
+      }
+      return '<div class="cd-item '+cls+'">' +
+        '<span class="cd-name">'+esc(r.d.name)+
+          '<span class="cd-when">'+esc(r.d.label)+'</span></span>' +
+        '<span class="cd-left"><span class="cd-n">'+n+'</span>' +
+          (u ? '<span class="cd-u">'+u+'</span>' : '') + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  render();
+  // roll over without a reload if the page is left open past midnight
+  setInterval(render, 60000);
 })();
 
 (function(){
