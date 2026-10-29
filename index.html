@@ -80,21 +80,26 @@ main{flex:1;padding:0 18px calc(env(safe-area-inset-bottom,0px) + 40px)}
 
 .hero{margin-bottom:22px}
 .hero p{margin:2px 0 0;color:var(--muted);font-size:14px;max-width:40ch}
-.cd{display:flex;flex-direction:column;gap:7px;margin-bottom:20px}
+.cd{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
 .cd-head{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;
   text-transform:uppercase;color:var(--muted-2);margin-bottom:1px}
-.cd-item{display:flex;align-items:baseline;gap:10px;padding:10px 12px;border-radius:11px;
+.cd-item{padding:11px 13px 10px;border-radius:12px;
   border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow)}
 .cd-item.next{border-color:var(--accent);background:var(--accent-soft)}
-.cd-item.past{opacity:.5}
-.cd-name{flex:1;min-width:0;font-size:13.5px;font-weight:600;line-height:1.3}
-.cd-when{display:block;font-weight:400;font-size:11px;color:var(--muted);margin-top:1px;
-  font-family:var(--font-mono)}
-.cd-left{flex:none;text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
-.cd-n{display:block;font-size:19px;font-weight:600;line-height:1.1}
-.cd-u{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2)}
-.cd-item.next .cd-n{color:var(--accent-ink)}
-.cd-item.soon .cd-n{color:var(--accent)}
+.cd-item.past{opacity:.45}
+.cd-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px}
+.cd-name{font-size:13.5px;font-weight:600;min-width:0}
+.cd-when{flex:none;font-family:var(--font-mono);font-size:10.5px;color:var(--muted)}
+.cd-clock{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.cd-seg{text-align:center;padding:5px 2px 4px;border-radius:7px;background:var(--surface-2)}
+.cd-item.next .cd-seg{background:color-mix(in srgb, var(--surface) 55%, transparent)}
+.cd-v{display:block;font-family:var(--font-mono);font-variant-numeric:tabular-nums;
+  font-size:19px;font-weight:600;line-height:1.15;letter-spacing:-.02em}
+.cd-item.next .cd-v{color:var(--accent-ink)}
+.cd-k{display:block;font-family:var(--font-mono);font-size:8.5px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted-2);margin-top:1px}
+.cd-done{font-family:var(--font-mono);font-size:12px;color:var(--muted);padding:3px 0 1px}
+@media (min-width:420px){ .cd-v{font-size:21px} }
 
 .menu{display:flex;flex-direction:column;gap:10px}
 .menu-item{
@@ -904,61 +909,104 @@ main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
 
 
 /* ------------------------------------------------------------------
-   COUNTDOWN — days remaining to the fixed deadlines below.
-   Recomputed from the device clock on every load, so it never goes stale.
-   Dates are [year, month(1-12), day] of the FIRST day of the event.
+   COUNTDOWN — live days / hours / minutes / seconds to each deadline.
+   `at` is the local wall-clock instant the countdown runs out:
+     [year, month(1-12), day, hour, minute]
+   `ends` (optional) is the last day of a multi-day event, so a two-day
+   exam reads "in progress" on both days instead of flipping to done
+   after day one. Built once, then only the digits are rewritten each
+   second — no innerHTML churn.
    ------------------------------------------------------------------ */
 (function(){
   var DEADLINES = [
-    { name:'Neuro summary', when:[2026,12,15],           label:'15 Dec 2026' },
-    { name:'MCQ test',      when:[2027,1,15],            label:'15 Jan 2027' },
-    { name:'Board MCQ',     when:[2027,6,13], days:2,    label:'13–14 Jun 2027' }
+    // submission deadline: runs to the END of the due date
+    { name:'Neuro summary', label:'15 Dec 2026',      at:[2026,12,15,23,59] },
+    // exams: run to the START of the exam day
+    { name:'MCQ test',      label:'15 Jan 2027',      at:[2027,1,15,0,0] },
+    { name:'Board MCQ',     label:'13–14 Jun 2027', at:[2027,6,13,0,0], ends:[2027,6,14] }
   ];
   var el = document.getElementById('countdown');
   if(!el) return;
 
-  function midnight(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
-  function esc(s){
-    return String(s).replace(/[&<>"]/g,function(c){
+  var SEG = [['d','days'],['h','hrs'],['m','min'],['s','sec']];
+  function esc(t){
+    return String(t).replace(/[&<>"]/g,function(c){
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
     });
   }
+  function pad2(n){ return n < 10 ? '0'+n : ''+n; }
 
-  function render(){
-    var today = midnight(new Date());
-    var rows = DEADLINES.map(function(d){
-      var start = new Date(d.when[0], d.when[1]-1, d.when[2]);
-      var end   = new Date(d.when[0], d.when[1]-1, d.when[2] + ((d.days||1)-1));
-      var left  = Math.round((start - today) / 86400000);
-      return { d:d, left:left, over:(today > end) };
-    });
+  // build the cards once
+  var items = DEADLINES.map(function(d){
+    var wrap = document.createElement('div');
+    wrap.className = 'cd-item';
+    wrap.innerHTML =
+      '<div class="cd-top"><span class="cd-name">'+esc(d.name)+'</span>'+
+      '<span class="cd-when">'+esc(d.label)+'</span></div>'+
+      '<div class="cd-clock">'+ SEG.map(function(sg){
+        return '<span class="cd-seg"><span class="cd-v" data-k="'+sg[0]+'">--</span>'+
+               '<span class="cd-k">'+sg[1]+'</span></span>';
+      }).join('') +'</div>'+
+      '<div class="cd-done" hidden></div>';
+    return {
+      d: d, el: wrap,
+      clock: wrap.querySelector('.cd-clock'),
+      done: wrap.querySelector('.cd-done'),
+      v: {
+        d: wrap.querySelector('[data-k="d"]'), h: wrap.querySelector('[data-k="h"]'),
+        m: wrap.querySelector('[data-k="m"]'), s: wrap.querySelector('[data-k="s"]')
+      },
+      target: new Date(d.at[0], d.at[1]-1, d.at[2], d.at[3], d.at[4], 0, 0),
+      endOf: d.ends ? new Date(d.ends[0], d.ends[1]-1, d.ends[2], 23, 59, 59, 999) : null
+    };
+  });
 
-    // the nearest deadline still ahead gets the accent
-    var nextIdx = -1;
-    for(var i=0;i<rows.length;i++){ if(!rows[i].over){ nextIdx = i; break; } }
+  var head = document.createElement('div');
+  head.className = 'cd-head';
+  head.textContent = 'Coming up';
+  el.appendChild(head);
+  items.forEach(function(it){ el.appendChild(it.el); });
 
-    el.innerHTML = '<div class="cd-head">Coming up</div>' + rows.map(function(r,i){
-      var n, u, cls = '';
-      if(r.over){ cls = 'past'; n = '—'; u = 'done'; }
-      else if(r.left < 0){ cls = 'next'; n = 'now'; u = 'in progress'; }
-      else if(r.left === 0){ cls = 'next'; n = 'today'; u = ''; }
-      else {
-        n = r.left; u = r.left === 1 ? 'day' : 'days';
-        if(i === nextIdx) cls = 'next';
-        else if(r.left <= 30) cls = 'soon';
+  function tick(){
+    var now = new Date();
+    var nextFound = false;
+
+    items.forEach(function(it){
+      var left = it.target - now;
+      var over = it.endOf ? (now > it.endOf) : (left <= 0);
+
+      it.el.classList.remove('next','past');
+
+      if(over){
+        it.el.classList.add('past');
+        it.clock.hidden = true;
+        it.done.hidden = false;
+        it.done.textContent = 'done';
+        return;
       }
-      return '<div class="cd-item '+cls+'">' +
-        '<span class="cd-name">'+esc(r.d.name)+
-          '<span class="cd-when">'+esc(r.d.label)+'</span></span>' +
-        '<span class="cd-left"><span class="cd-n">'+n+'</span>' +
-          (u ? '<span class="cd-u">'+u+'</span>' : '') + '</span>' +
-      '</div>';
-    }).join('');
+      if(left <= 0){            // started, multi-day event still running
+        it.el.classList.add('next');
+        it.clock.hidden = true;
+        it.done.hidden = false;
+        it.done.textContent = 'in progress';
+        nextFound = true;
+        return;
+      }
+
+      it.clock.hidden = false;
+      it.done.hidden = true;
+      var t = Math.floor(left/1000);
+      it.v.d.textContent = Math.floor(t/86400);
+      it.v.h.textContent = pad2(Math.floor(t/3600) % 24);
+      it.v.m.textContent = pad2(Math.floor(t/60) % 60);
+      it.v.s.textContent = pad2(t % 60);
+
+      if(!nextFound){ it.el.classList.add('next'); nextFound = true; }
+    });
   }
 
-  render();
-  // roll over without a reload if the page is left open past midnight
-  setInterval(render, 60000);
+  tick();
+  setInterval(tick, 1000);
 })();
 
 (function(){
